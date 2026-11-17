@@ -7,8 +7,11 @@ message, tool call, nested command, image view, file change, tool result and
 reasoning placeholder as a distinct node. JSONL file, physical line, ordinal,
 call id and timestamps remain attached. Calls/results join by `call_id`, including
 parallel calls; sequence arrows mean recorded order, not proof of causation.
-UI echoes of messages/reasoning are suppressed. Older event-stream sessions keep
-the existing compact graph. Child-agent lanes retain the existing adapter view.
+Node badges use the original Codex types: `message` with role/phase,
+`custom_tool_call`, `custom_tool_call_output`, `reasoning`, and
+`item_completed · CommandExecution` / `ImageView` / `FileChange`. UI echoes of
+messages/reasoning are suppressed. Older event-stream sessions keep the existing
+compact graph. Child-agent lanes retain the existing adapter view.
 
 LLM interpretation is retrospective and can include subsequent actions; it is hidden while replay is positioned before the end of the run.
 
@@ -48,6 +51,14 @@ disables other agent adapters, and filters recorded working directories to
 There are currently 39 recorded campaigns. Override the locations using
 `RUNGRAPH_CODEX_CAMPAIGNS` and `RUNGRAPH_CAMPAIGN_PROJECT` if needed. Restart an
 existing server after changing its scope; the launcher does not manage tmux.
+
+The launcher loads `config/percampaign-titles.json`, producing titles such as
+`037 - Fig. S9 / S6`. The Figure references are curated from `structures/*.md`
+notes: they identify cited reconstruction evidence, including related/supporting
+figures when no exact target depiction exists. They are not assertions that a
+paper supplies coordinates for that target. Set `RUNGRAPH_TITLES_FILE` to another
+JSON mapping to customize them. Explicit run-id titles take precedence over
+campaign-directory titles, which take precedence over numeric campaign ids.
 
 The structure-generation sessions used a separate Codex home. On the original
 machine, target campaign 037 with:

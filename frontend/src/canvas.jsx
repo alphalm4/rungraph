@@ -1,3 +1,4 @@
+import { nodeTypeLabel } from '../../src/node-types.js';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 // memo() for the two per-element views — MEASURED, not assumed (spec §5 /
 // open question 3): on a 560-node, 1,280-event run each replay step cost
@@ -26,14 +27,7 @@ import {
   panToReveal,
 } from './viewmath.js';
 
-const KIND_TAGS = {
-  evidence: 'evidence',
-  turn: 'turn',
-  agent: 'agent',
-  tool: 'tool',
-  workflow: 'workflow',
-  human: 'human',
-};
+
 
 const DRAG_THRESHOLD = 4; // px of total movement before a press becomes a pan
 const DOUBLE_TAP_MS = 400;
@@ -893,7 +887,7 @@ const NodeView = memo(function NodeView({ node, pos, selected, focused, dim, rev
       </clipPath>
       <g clip-path={`url(#${clip})`}>
         <text class="kindtag" x="12" y="14">
-          {node.kind === 'human' ? node.interventionKind ?? 'human' : KIND_TAGS[node.kind]}
+          {node.kind === 'human' ? node.interventionKind ?? 'human' : nodeTypeLabel(node)}
           {node.kind === 'workflow' ? '  ⌄ drill in' : ''}
         </text>
         <text class="label" x="12" y={meta ? pos.h - 22 : pos.h / 2 + 9}>{replayLabel(node, callsShown)}</text>

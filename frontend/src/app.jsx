@@ -1461,7 +1461,8 @@ function Picker({ index, runId, onSelect, onResume }) {
         <div class="empty microlabel">no runs match “{query.trim()}”</div>
       )}
       {groups.map((g) => {
-        const open = openFor(g);
+        const customTitles = g.runs.length > 0 && g.runs.every(r => r.customTitle);
+        const open = customTitles || openFor(g);
         const groupId = `project-${encodeURIComponent(g.key)}`;
         return (
           <div
@@ -1471,7 +1472,7 @@ function Picker({ index, runId, onSelect, onResume }) {
             data-open={String(open)}
             data-holds-selection={String(g.runs.some((r) => r.runId === runId))}
           >
-            <button
+            {!customTitles && <button
               class="section project-toggle"
               onClick={() => setGroup(g.key, !open)}
               aria-expanded={String(open)}
@@ -1486,7 +1487,7 @@ function Picker({ index, runId, onSelect, onResume }) {
                     narrowed a mixed group. */}
                 {g.runs.length === g.total ? g.total : `${g.runs.length} of ${g.total}`}
               </span>
-            </button>
+            </button>}
             {open && (
               <div class="project-runs" id={groupId}>
                 {g.runs.map((r) => (
@@ -1499,7 +1500,7 @@ function Picker({ index, runId, onSelect, onResume }) {
                       data-selected={String(!selectMode && r.runId === runId)}
                       data-checked={String(selectMode && checked.has(r.runId))}
                       onClick={() => (selectMode ? toggleChecked(r.runId) : onSelect(r.runId))}
-                      title={r.runId}
+                      title={r.customTitle || r.runId}
                     >
                       <div class="title">
                         {selectMode && (

@@ -1,4 +1,4 @@
-import { readdirSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { isAbsolute, join, resolve } from 'node:path';
 import * as claudeCode from './adapters/claude-code/index.js';
@@ -111,6 +111,14 @@ export async function scan(opts = {}) {
       return adapter?.matchesProject?.(r, p) ?? false;
     });
   }
+  if (process.env.RUNGRAPH_TITLES_FILE) {
+    const titles = JSON.parse(readFileSync(process.env.RUNGRAPH_TITLES_FILE, 'utf8'));
+    for (const run of runs) {
+      const campaign = run.project?.split('/').filter(Boolean).at(-1) ?? '';
+      const title = titles[run.runId] ?? titles[campaign] ?? titles[campaign.split('_')[0]];
+      if (typeof title === 'string' && title.trim()) { run.title = title; run.customTitle = title; }
+    }
+  }
   runs.sort(byRecency);
   return { runs, ...(warnings.length ? { warnings } : {}) };
 }
@@ -143,6 +151,7 @@ export function toIndexEntry(ref, now = Date.now()) {
     adapter: ref.adapter,
     kind: ref.kind,
     title: ref.title,
+    ...(ref.customTitle ? { customTitle: ref.customTitle } : {}),
     project: ref.project,
     startedAt: ref.startedAt ?? null,
     modifiedAt: ref.modifiedAt,

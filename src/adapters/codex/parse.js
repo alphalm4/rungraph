@@ -266,6 +266,7 @@ export async function parse(ref, opts = {}) {
     g.meta.ext = { ...g.meta.ext, codex: { ...g.meta.ext?.codex, evidenceChain: true } };
     if (evidence.prompt) g.meta.title = snippet(evidence.prompt, 100);
   }
+  if (ref.customTitle) g.meta.title = ref.customTitle;
   return { ir: g, details };
 }
 

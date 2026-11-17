@@ -7,6 +7,15 @@ const SIZES = {
   agent: { minW: 190, maxW: 280, h: 54 },
   tool: { minW: 120, maxW: 300, h: 36 }, // maxW fits ~40-char descriptive labels
   workflow: { minW: 210, maxW: 300, h: 54 },
+  message: { minW: 300, maxW: 520, h: 56 },
+  reasoning: { minW: 300, maxW: 480, h: 52 },
+  custom_tool_call: { minW: 320, maxW: 520, h: 56 },
+  function_call: { minW: 320, maxW: 520, h: 56 },
+  custom_tool_call_output: { minW: 320, maxW: 520, h: 56 },
+  function_call_output: { minW: 320, maxW: 520, h: 56 },
+  CommandExecution: { minW: 320, maxW: 520, h: 56 },
+  ImageView: { minW: 300, maxW: 520, h: 56 },
+  FileChange: { minW: 300, maxW: 520, h: 56 },
   evidence: { minW: 200, maxW: 430, h: 54 },
   human: { minW: 150, maxW: 260, h: 42 },
 };

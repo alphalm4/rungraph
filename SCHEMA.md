@@ -614,12 +614,20 @@ optional is genuinely optional) — consumers must tolerate absence.
 
 ## Evidence nodes and summaries (fork extension)
 
-`kind: "evidence"` is an additive vendor-neutral node for messages, observations,
-results, and reasoning availability. It uses the existing status/timestamp/detail
-contract. Codex provenance lives in `ext.codex`: `eventType`, `source` (file,
-physical line, ordinal, timestamp), and optional `callId`. Details have
-`kind: "evidence"`, `eventType`, `source`, full `code`/`text`/`output`, image data
-URLs, and optional recorded execution/context. Ciphertext is never included.
+Modern Codex graph nodes use the native record vocabulary for `kind`: `message`,
+`reasoning`, `custom_tool_call`, `custom_tool_call_output`, `function_call`,
+`function_call_output`, `CommandExecution`, `ImageView`, and `FileChange`.
+The UI labels messages with their recorded role/phase, and nested UI records as
+`item_completed · CommandExecution` (or the corresponding item type). Generic
+`evidence`/`tool` categories are not displayed for these records.
+
+The existing status/timestamp/detail contract remains. Codex provenance lives in
+`ext.codex`: `recordType` (outer envelope type), `role`, `phase`, internal
+`eventType`, `source` (file, physical line, ordinal, timestamp), and optional
+`callId`. Detail payloads retain the internal discriminator `kind: "evidence"`
+for rendering/cache compatibility; it is not a displayed Codex record type.
+They include full `code`/`text`/`output`, image data URLs, and optional recorded
+execution/context. Ciphertext is never included.
 Additional sequence edges labelled `call_id → result` express exact result pairing;
 ordinary sequence edges express log order only. Nested active-interval attribution
 is explicitly labelled as inferred/ambiguous.
@@ -632,3 +640,15 @@ It is an explicit model boundary guarded by the same Host/Origin rules as focus.
 `GET /api/detail` adds a cached `summary` and `summaryBackend` for evidence nodes;
 it never runs the model. Summaries are local cache artifacts rather than IR facts
 and are not exported with bundles.
+
+
+### Custom campaign titles
+
+`RUNGRAPH_TITLES_FILE` names a JSON object mapping run ids, campaign directory
+names, or numeric campaign ids to display titles (in that precedence order).
+Matched references and index entries carry `customTitle`, and the same title
+is used for graph metadata. Source prompt nodes remain unchanged. Custom-title
+sidebar entries do not repeat their long project-directory header. The included
+`config/percampaign-titles.json` uses `campaign - Fig. reference` labels; those
+references are curated from the campaigns' reconstruction notes and may name
+a related/supporting figure rather than an exact depiction of the target.

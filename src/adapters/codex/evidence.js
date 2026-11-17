@@ -31,7 +31,8 @@ export function evidenceGraph(records, file, { collectDetails = false, prefix = 
     prompt = '',
     context = [],
     activeCalls = new Map();
-  const add = (r, eventType, label, data = {}, kind = 'evidence') => {
+  const add = (r, eventType, label, data = {}) => {
+    const kind = r.type === 'response_item' ? r.payload.type : r.payload.item.type;
     const id = `${prefix}:${r.ordinal ?? r._line}:${eventType}`;
     const source = { file, line: r._line, ordinal: r.ordinal ?? null, timestamp: r.timestamp };
     const node = {
@@ -41,7 +42,7 @@ export function evidenceGraph(records, file, { collectDetails = false, prefix = 
       status: 'completed',
       startedAt: r.timestamp,
       hasDetail: true,
-      ext: { codex: { eventType, source, callId: data.callId ?? null } },
+      ext: { codex: { eventType, source, callId: data.callId ?? null, recordType: r.type, role: r.payload?.role, phase: r.payload?.phase } },
     };
     nodes.push(node);
     if (tip) edges.push({ id: `e:sequence:${tip}→${id}`, kind: 'sequence', from: tip, to: id });
@@ -63,7 +64,7 @@ export function evidenceGraph(records, file, { collectDetails = false, prefix = 
           prompt = text;
           context = [];
         } else context.push({ text, phase: p.phase, source: { file, line: r._line } });
-        add(r, 'message', `${p.role}${p.phase ? ` · ${p.phase}` : ''}: ${text}`, {
+        add(r, 'message', text, {
           role: p.role,
           phase: p.phase,
           text,
@@ -76,8 +77,8 @@ export function evidenceGraph(records, file, { collectDetails = false, prefix = 
           r,
           'reasoning',
           p.encrypted_content
-            ? 'Reasoning · encrypted, unavailable'
-            : 'Reasoning · recorded summary',
+            ? 'encrypted_content · unavailable'
+            : 'summary · recorded text',
           { text: textOf(p.summary) || textOf(p.content), encrypted: Boolean(p.encrypted_content) },
         );
       } else if (['function_call', 'custom_tool_call'].includes(p.type)) {
@@ -87,7 +88,6 @@ export function evidenceGraph(records, file, { collectDetails = false, prefix = 
           'call',
           `${p.name} · ${code}`,
           { callId: p.call_id, name: p.name, code, prompt, precedingMessages: [...context] },
-          'tool',
         );
         Object.assign(n, { status: 'running', callCount: 1, errorCount: 0 });
         calls.set(p.call_id, n);
@@ -149,7 +149,7 @@ export function evidenceGraph(records, file, { collectDetails = false, prefix = 
               code: next.payload.input ?? next.payload.arguments,
             }
           : null;
-        const n = add(r, 'output', `Output · ${images.length} images · ${text}`, {
+        const n = add(r, 'output', `${[...new Set(blocks.map(b => b.type))].join(' + ')}${images.length ? ` · ${images.length} images` : ''} · ${text}`, {
           callId: p.call_id,
           text,
           images,
@@ -207,10 +207,10 @@ export function evidenceGraph(records, file, { collectDetails = false, prefix = 
         };
         const label =
           i.type === 'CommandExecution'
-            ? `Command · ${JSON.stringify(i.command)}`
+            ? `command · ${Array.isArray(i.command) ? i.command.join(' ') : i.command}`
             : i.type === 'ImageView'
-              ? `Image viewed · ${i.path}`
-              : `File change · ${Object.keys(i.changes ?? {}).join(', ')}`;
+              ? `path · ${i.path}`
+              : `changes · ${Object.keys(i.changes ?? {}).join(', ')}`;
         const n = add(r, i.type, label, data);
         if (i.type === 'CommandExecution' && i.exit_code != null && i.exit_code !== 0)
           n.status = 'error';

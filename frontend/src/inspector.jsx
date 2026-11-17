@@ -1,3 +1,4 @@
+import { nodeTypeLabel } from '../../src/node-types.js';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { fetchDetail, summarizeNode } from './api.js';
 import { fmtTokens, fmtDuration } from './canvas.jsx';
@@ -493,7 +494,7 @@ function NodeDetail({
     const startsAt = replay.index?.byNode.get(nodeId)?.startIdx;
     return (
       <>
-        <div class="microlabel">{node.kind}</div>
+        <div class="microlabel codex-type">{nodeTypeLabel(node)}</div>
         <div class="loading">
           not yet — at this moment this node has not happened
           {typeof startsAt === 'number' ? ` · it starts at event ${startsAt + 1} of ${replay.total}` : ''}
@@ -532,7 +533,7 @@ function NodeDetail({
 
   return (
     <>
-      <div class="microlabel">{node.kind}</div>
+      <div class="microlabel codex-type">{nodeTypeLabel(node)}</div>
       <h2>{node.label}</h2>
       <dl class="kv">
         <dt>status</dt>
@@ -602,7 +603,7 @@ function NodeDetail({
       {failed && <div class="loading">transcript unavailable</div>}
       {body && (
         <div class="detail-body" data-stale={String(stale)}>
-          <DetailBody key={key} detail={body} futureFrom={futureFrom} runId={runId} nodeId={nodeId} replay={replay} />
+          <DetailBody key={key} detail={body} futureFrom={futureFrom} runId={runId} nodeId={nodeId} replay={replay} nativeType={nodeTypeLabel(node)} />
         </div>
       )}
     </>
@@ -610,10 +611,10 @@ function NodeDetail({
 }
 
 /** `futureFrom`: the first call row (0-based) that has not happened yet at the playhead; Infinity when all have. */
-function DetailBody({ detail, futureFrom = Infinity, runId, nodeId, replay }) {
+function DetailBody({ detail, futureFrom = Infinity, runId, nodeId, replay, nativeType }) {
   switch (detail.kind) {
     case 'evidence':
-      return <EvidenceDetail detail={detail} runId={runId} nodeId={nodeId} replay={replay} />;
+      return <EvidenceDetail detail={detail} runId={runId} nodeId={nodeId} replay={replay} nativeType={nativeType} />;
     case 'turn':
       return (
         <>
@@ -767,7 +768,7 @@ function fmtTime(iso) {
   });
 }
 
-function EvidenceDetail({ detail, runId, nodeId, replay }) {
+function EvidenceDetail({ detail, runId, nodeId, replay, nativeType }) {
   const retrospective = Boolean(replay && replay.cursor < replay.total);
   const awaitingResult = Boolean(replay?.state && detail.outputNodeId && !replay.state.present.has(detail.outputNodeId));
   const [result, setResult] = useState(detail.summary);
@@ -782,7 +783,7 @@ function EvidenceDetail({ detail, runId, nodeId, replay }) {
   };
   const s = retrospective ? null : result?.summary;
   return <>
-    <div class="microlabel section-label">{detail.eventType} · line {detail.source?.line}</div>
+    <div class="microlabel section-label codex-type">{nativeType || detail.eventType} · line {detail.source?.line}</div>
     <p class="microlabel">{detail.source?.file}</p>
     {detail.encrypted && <p>Reasoning is encrypted. Its content is unavailable.</p>}
     <button class="row" disabled={busy || retrospective || (detail.encrypted && !detail.text)} onClick={summarize}>
@@ -799,11 +800,11 @@ function EvidenceDetail({ detail, runId, nodeId, replay }) {
       <p class="microlabel">Evidence: {s.evidence.map(e => `${e.file}:${e.line}`).join(', ')}</p>
       {result.redacted > 0 && <p>{result.redacted} secret patterns redacted from model input.</p>}
     </div>}
-    {detail.code && <><div class="microlabel section-label">Executed code · original</div><pre>{detail.code}</pre></>}
-    {!awaitingResult && (detail.output || detail.text) && <><div class="microlabel section-label">Recorded text · original{detail.truncated ? ' · truncated by source' : ''}</div><pre>{detail.output || detail.text}</pre></>}
-    {detail.execution && <><div class="microlabel section-label">Recorded execution · original</div><pre>{JSON.stringify(detail.execution, null, 2)}</pre></>}
+    {detail.code && <><div class="microlabel section-label">input / arguments</div><pre>{detail.code}</pre></>}
+    {!awaitingResult && (detail.output || detail.text) && <><div class="microlabel section-label">output / content{detail.truncated ? ' · truncated by source' : ''}</div><pre>{detail.output || detail.text}</pre></>}
+    {detail.execution && <><div class="microlabel section-label">item_completed.item</div><pre>{JSON.stringify(detail.execution, null, 2)}</pre></>}
     {!awaitingResult && detail.images?.map((im,i) => <figure class="evidence-image" key={i}><img src={im.url} alt={`Recorded tool output image ${i+1}`} loading="lazy"/><figcaption>Image {i+1} · {im.path || "actual recorded output"}</figcaption></figure>)}
     {detail.precedingMessages?.length > 0 && <details><summary>Preceding GPT messages</summary>{detail.precedingMessages.map((m,i) => <pre key={i}>Line {m.source?.line ?? m.line}: {m.text}</pre>)}</details>}
-    {!awaitingResult && detail.observations?.length > 0 && <details><summary>Commands, image views and file changes inside this call</summary>{detail.observations.map((o,i) => <pre key={i}>{JSON.stringify(o, (k,v) => k === "url" && typeof v === "string" && v.startsWith("data:image/") ? "[pixels displayed above]" : v, 2)}</pre>)}</details>}
+    {!awaitingResult && detail.observations?.length > 0 && <details><summary>item_completed records inside this call</summary>{detail.observations.map((o,i) => <section key={i}><div class="microlabel section-label codex-type">item_completed · {o.execution?.type || o.eventType} · line {o.source?.line}</div><pre>{JSON.stringify(o.execution, null, 2)}</pre></section>)}</details>}
   </>;
 }

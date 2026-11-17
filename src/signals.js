@@ -1,3 +1,4 @@
+import { isToolCall } from './node-types.js';
 /**
  * Derived signals — the graph's opinion about a run.
  *
@@ -142,7 +143,7 @@ function retryStorms(ordered, lane, excused) {
   // fails → Read → Edit fails. The reads are the agent investigating, not the
   // loop resolving. Only another call of the same tool ends the storm.
   for (const family of groupBy(
-    ordered.filter((n) => n.kind === 'tool'),
+    ordered.filter(isToolCall),
     (n) => laneFamilyKey(lane, n),
   ).values()) {
     let run = [];
