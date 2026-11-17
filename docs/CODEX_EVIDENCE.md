@@ -45,6 +45,8 @@ export RUNGRAPH_SUMMARY_MODEL=gpt-6.1-sol
 
 ## Summarize before viewing, or on demand
 
+Batch summaries use two concurrent model calls by default; set `RUNGRAPH_SUMMARY_CONCURRENCY=1` for serial execution (allowed range 1–4). Completed steps remain cached if a later step fails.
+
 Default backend: the installed **Codex CLI and its existing login**, no separate
 API key. Click **Summarize with Codex** in the inspector, or precompute every tool
 output (one structured summary per call/result pair):

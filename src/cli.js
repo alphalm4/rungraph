@@ -557,12 +557,21 @@ async function cmdSummarize(runId, opts) {
   const { details } = await adapter.parse(ref, { collectDetails: true });
   const outputs = [...details.entries()].filter(([,d]) => d.kind === 'evidence' && d.eventType === 'output');
   if (!outputs.length) throw new Error('No recorded output evidence in this run.');
-  const results = [];
-  for (const [nodeId, d] of outputs) {
-    process.stderr.write(`summary ${results.length + 1}/${outputs.length} · line ${d.source.line}\n`);
-    const result = await summarizeEvidence(d);
-    results.push({ nodeId, ...result });
-  }
+  const results = new Array(outputs.length);
+  const concurrency = Number(process.env.RUNGRAPH_SUMMARY_CONCURRENCY || 2);
+  if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 4) throw new Error('RUNGRAPH_SUMMARY_CONCURRENCY must be an integer from 1 to 4.');
+  let next = 0, failed = null;
+  const worker = async () => {
+    while (next < outputs.length && !failed) {
+      const index = next++;
+      const [nodeId, detail] = outputs[index];
+      process.stderr.write(`summary ${index + 1}/${outputs.length} · line ${detail.source.line}\n`);
+      try { results[index] = { nodeId, ...await summarizeEvidence(detail) }; }
+      catch (error) { failed ??= error; }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(concurrency, outputs.length) }, worker));
+  if (failed) throw failed; // completed summaries remain cached for a retry
   process.stdout.write(JSON.stringify({ runId, results }, null, opts.json ? 0 : 2) + '\n');
   return 0;
 }

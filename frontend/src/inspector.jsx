@@ -799,7 +799,7 @@ function EvidenceDetail({ detail, runId, nodeId }) {
     {detail.code && <><div class="microlabel section-label">Executed code · original</div><pre>{detail.code}</pre></>}
     {(detail.output || detail.text) && <><div class="microlabel section-label">Recorded text · original{detail.truncated ? ' · truncated by source' : ''}</div><pre>{detail.output || detail.text}</pre></>}
     {detail.execution && <><div class="microlabel section-label">Recorded execution · original</div><pre>{JSON.stringify(detail.execution, null, 2)}</pre></>}
-    {detail.images?.map((im,i) => <figure class="evidence-image" key={i}><img src={im.url} alt={`Recorded tool output image ${i+1}`} loading="lazy"/><figcaption>Image {i+1} · actual recorded output</figcaption></figure>)}
+    {detail.images?.map((im,i) => <figure class="evidence-image" key={i}><img src={im.url} alt={`Recorded tool output image ${i+1}`} loading="lazy"/><figcaption>Image {i+1} · {im.path || "actual recorded output"}</figcaption></figure>)}
     {detail.precedingMessages?.length > 0 && <details><summary>Preceding GPT messages</summary>{detail.precedingMessages.map((m,i) => <pre key={i}>Line {m.source?.line ?? m.line}: {m.text}</pre>)}</details>}
     {detail.observations?.length > 0 && <details><summary>Commands, image views and file changes inside this call</summary>{detail.observations.map((o,i) => <pre key={i}>{JSON.stringify(o, (k,v) => k === "url" && typeof v === "string" && v.startsWith("data:image/") ? "[pixels displayed above]" : v, 2)}</pre>)}</details>}
   </>;

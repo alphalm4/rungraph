@@ -109,10 +109,19 @@ export function evidenceGraph(records, file, { collectDetails = false, prefix = 
         const observations = collectDetails
           ? [...details.values()].filter((d) => d.parentCallIds?.includes(p.call_id))
           : [];
-        const followingMessages = records
+        const future = records.slice(records.indexOf(r) + 1);
+        const boundary = future.findIndex(
+          (x) =>
+            (x.type === 'event_msg' &&
+              ['task_complete', 'task_started'].includes(x.payload?.type)) ||
+            (x.type === 'response_item' &&
+              x.payload?.type === 'message' &&
+              x.payload.role === 'user'),
+        );
+        const sameTurn = boundary < 0 ? future : future.slice(0, boundary);
+        const followingMessages = sameTurn
           .filter(
             (x) =>
-              x._line > r._line &&
               x.type === 'response_item' &&
               x.payload?.type === 'message' &&
               x.payload.role === 'assistant',
@@ -128,9 +137,8 @@ export function evidenceGraph(records, file, { collectDetails = false, prefix = 
             views[index].imageAttribution = 'ordered view/output pairing';
           });
         }
-        const next = records.find(
+        const next = sameTurn.find(
           (x) =>
-            x._line > r._line &&
             x.type === 'response_item' &&
             ['function_call', 'custom_tool_call'].includes(x.payload?.type),
         );
