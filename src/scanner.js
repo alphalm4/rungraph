@@ -1,3 +1,4 @@
+import { readdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { isAbsolute, join, resolve } from 'node:path';
 import * as claudeCode from './adapters/claude-code/index.js';
@@ -23,7 +24,7 @@ export function defaultRootDirs() {
   };
   return {
     'claude-code': roots('RUNGRAPH_CLAUDE_PROJECTS', join(homedir(), '.claude', 'projects')),
-    codex: roots('RUNGRAPH_CODEX_SESSIONS', join(homedir(), '.codex', 'sessions')),
+    codex: campaignRoots(process.env.RUNGRAPH_CODEX_CAMPAIGNS) ?? roots('RUNGRAPH_CODEX_SESSIONS', join(homedir(), '.codex', 'sessions')),
     hermes: roots('RUNGRAPH_HERMES_HOME', join(homedir(), '.hermes')),
     // opencode keeps ONE global database in its XDG data dir. The env var it
     // honours for that dir is XDG_DATA_HOME, so rungraph follows it rather
@@ -57,6 +58,18 @@ export function defaultRootDirs() {
  * Cursor's Electron `userData` directory. Only macOS is verified (spec §16
  * item 9); Linux and Windows follow Electron's convention.
  */
+// Dedicated campaign Codex homes live under a common parent rather than one
+// sessions tree. Explicitly opting in takes precedence over a single-session
+// override, so an inherited 037-only environment cannot hide other campaigns.
+function campaignRoots(parent) {
+  if (parent === undefined) return null;
+  if (!parent) return [];
+  return readdirSync(parent, { withFileTypes: true })
+    .filter(entry => entry.isDirectory() && /^\d+_/.test(entry.name))
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map(entry => join(parent, entry.name, 'sessions'));
+}
+
 function cursorUserData() {
   if (process.platform === 'darwin') return join(homedir(), 'Library', 'Application Support', 'Cursor');
   if (process.platform === 'win32') return join(process.env.APPDATA || join(homedir(), 'AppData', 'Roaming'), 'Cursor');

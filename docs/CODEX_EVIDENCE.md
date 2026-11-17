@@ -35,6 +35,20 @@ Build once before serving; it does not install packages or build on its own.
 The server prints its loopback URL (normally `http://127.0.0.1:4321`). The viewer
 never starts the user's original task or modifies its artifacts.
 
+For the paper reconstruction workspace, show **only** its isolated Codex campaigns:
+
+```bash
+cd ~/workspace/rungraph
+./scripts/percampaign.sh
+```
+
+This discovers the campaign homes under `~/.codex_scratch_gpt6astra_xh_261111_pc`,
+disables other agent adapters, and filters recorded working directories to
+`~/workspace/ongo_from_scratch/codex_gpt6astra_xh_261111_percampaign`.
+There are currently 39 recorded campaigns. Override the locations using
+`RUNGRAPH_CODEX_CAMPAIGNS` and `RUNGRAPH_CAMPAIGN_PROJECT` if needed. Restart an
+existing server after changing its scope; the launcher does not manage tmux.
+
 The structure-generation sessions used a separate Codex home. On the original
 machine, target campaign 037 with:
 
