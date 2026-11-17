@@ -1,3 +1,4 @@
+import { summarizeEvidence, cachedSummary, summaryConfig } from './summary.js';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { join, normalize, dirname, extname, basename } from 'node:path';
@@ -152,6 +153,19 @@ async function handle(req, res, state) {
   const url = new URL(req.url, 'http://localhost');
   const path = url.pathname;
 
+  if (path === '/api/summary') {
+    if (req.method !== 'POST') return sendJson(res, 405, { error: 'POST only' });
+    if (req.headers.origin && !isLocalOrigin(req.headers.origin, state.port)) return sendJson(res, 403, { error: 'cross-origin summary rejected' });
+    let body;
+    try { body = await readJsonBody(req); } catch { return sendJson(res, 400, { error: 'invalid summary request' }); }
+    if (typeof body?.runId !== 'string' || typeof body?.nodeId !== 'string') return sendJson(res, 400, { error: 'expected runId and nodeId' });
+    const hit = await loadGraph(state, body.runId);
+    let detail = hit?.details.get(body.nodeId);
+    if (detail?.outputNodeId) detail = hit.details.get(detail.outputNodeId) ?? detail;
+    if (!detail || detail.kind !== 'evidence') return sendJson(res, 404, { error: 'no evidence for this node' });
+    try { return sendJson(res, 200, await summarizeEvidence(detail)); }
+    catch (err) { return sendJson(res, 502, { error: err.message }); }
+  }
   if (path === '/api/focus') {
     if (req.method !== 'POST') return sendJson(res, 405, { error: 'POST only' });
     return apiFocus(req, res, state);
@@ -494,7 +508,7 @@ async function apiDetail(res, state, nodeId, runId) {
   if (!hit) return sendJson(res, 404, { error: `no run found with id "${runId}"` });
   const detail = hit.details.get(nodeId);
   if (!detail) return sendJson(res, 404, { error: `no detail for node "${nodeId}"` });
-  sendJson(res, 200, detail);
+  sendJson(res, 200, detail.kind === 'evidence' ? { ...detail, summary: await cachedSummary(hit.details.get(detail.outputNodeId) ?? detail), summaryBackend: summaryConfig().backend } : detail);
 }
 
 /**

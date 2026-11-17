@@ -94,3 +94,10 @@ export function applyDelta(graph, msg) {
     signals: msg.signals ?? graph.signals,
   };
 }
+
+export async function summarizeNode(runId, nodeId) {
+  const r = await fetch('/api/summary', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ runId, nodeId }) });
+  const body = await r.json();
+  if (!r.ok) throw new Error(body.error || `summary: ${r.status}`);
+  return body;
+}

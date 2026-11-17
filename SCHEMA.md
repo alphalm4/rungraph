@@ -610,3 +610,25 @@ provider is registered".
 `irVersion` bumps on breaking shape changes. Additive optional fields do not
 bump the version. Adapters may emit fewer fields than documented (everything
 optional is genuinely optional) — consumers must tolerate absence.
+
+
+## Evidence nodes and summaries (fork extension)
+
+`kind: "evidence"` is an additive vendor-neutral node for messages, observations,
+results, and reasoning availability. It uses the existing status/timestamp/detail
+contract. Codex provenance lives in `ext.codex`: `eventType`, `source` (file,
+physical line, ordinal, timestamp), and optional `callId`. Details have
+`kind: "evidence"`, `eventType`, `source`, full `code`/`text`/`output`, image data
+URLs, and optional recorded execution/context. Ciphertext is never included.
+Additional sequence edges labelled `call_id → result` express exact result pairing;
+ordinary sequence edges express log order only. Nested active-interval attribution
+is explicitly labelled as inferred/ambiguous.
+
+`POST /api/summary` takes `{runId,nodeId}` (server-resolved evidence only). It
+returns a versioned, content-addressed result with backend/model/time, redaction
+and omission metadata, and a `summary` containing stated/inferred intent, code,
+textOutput, image descriptions, nextAction, limitations and file/line citations.
+It is an explicit model boundary guarded by the same Host/Origin rules as focus.
+`GET /api/detail` adds a cached `summary` and `summaryBackend` for evidence nodes;
+it never runs the model. Summaries are local cache artifacts rather than IR facts
+and are not exported with bundles.

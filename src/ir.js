@@ -7,7 +7,7 @@
  * nodes/edges/meta — nothing else in the IR may be provider-specific.
  *
  * @typedef {'session' | 'workflow'} RunKind
- * @typedef {'turn' | 'agent' | 'tool' | 'workflow' | 'human'} NodeKind
+ * @typedef {'turn' | 'agent' | 'tool' | 'workflow' | 'human' | 'evidence'} NodeKind
  * @typedef {'sequence' | 'spawn' | 'return'} EdgeKind
  * @typedef {'completed' | 'error' | 'running'} NodeStatus
  *
@@ -138,7 +138,7 @@ import { emptyCoverage } from './coverage.js';
 
 export const IR_VERSION = 1;
 
-export const NODE_KINDS = ['turn', 'agent', 'tool', 'workflow', 'human'];
+export const NODE_KINDS = ['turn', 'agent', 'tool', 'workflow', 'human', 'evidence'];
 export const EDGE_KINDS = ['sequence', 'spawn', 'return'];
 export const STATUSES = ['completed', 'error', 'running'];
 

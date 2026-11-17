@@ -1444,3 +1444,9 @@ button.ghost[data-on="true"] {
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+
+.evidence-image { margin: 16px 0; }
+.evidence-image img { max-width: 100%; height: auto; background: white; }
+.evidence-image figcaption { font-size: 12px; opacity: .7; }
+.evidence-summary { border-left: 3px solid #759be9; padding-left: 12px; margin: 16px 0; }
+.node[data-kind="evidence"] rect { stroke: #759be9; }

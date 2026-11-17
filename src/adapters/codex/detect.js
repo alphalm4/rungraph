@@ -1,6 +1,6 @@
 import { readdir } from 'node:fs/promises';
 import { join, basename } from 'node:path';
-import { headLines, safeParseJson, statOrNull, shellQuote } from '../../util.js';
+import { headLines, safeParseJson, statOrNull, shellQuote, readJsonLines } from '../../util.js';
 import { snippet } from '../../ir.js';
 
 /**
@@ -131,6 +131,19 @@ async function peekRollout(file) {
   for (const l of lines) {
     if (l?.type === 'event_msg' && l.payload?.type === 'user_message') {
       title = promptText(l.payload.message);
+      if (title) break;
+    }
+  }
+  if (!title) {
+    // Large tool/developer preambles can put the first prompt beyond headLines.
+    for await (const { obj, lineNo } of readJsonLines(file)) {
+      if (lineNo > 128) break;
+      const p = obj?.payload;
+      if (obj?.type === 'event_msg' && p?.type === 'user_message') title = promptText(p.message);
+      if (obj?.type === 'response_item' && p?.type === 'message' && p.role === 'user') {
+        const text = (p.content ?? []).map(c => c.text ?? '').join('\n');
+        if (!text.startsWith('<environment_context>') && !text.startsWith('# AGENTS.md')) title = text;
+      }
       if (title) break;
     }
   }

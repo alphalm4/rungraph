@@ -1,3 +1,4 @@
+import { summarizeEvidence } from './summary.js';
 import { parseArgs } from 'node:util';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
@@ -22,6 +23,7 @@ directed graph. Everything is local; the server binds 127.0.0.1 only.
 USAGE
   rungraph                       Scan, start the server, open the browser.
   rungraph list [--json]         Print the run index (newest first).
+  rungraph summarize <runId>      Summarize each recorded output with Codex; cache for display.
   rungraph graph <runId>         Print the Graph IR for one run (JSON, stdout).
   rungraph find <runId> <query>  Print nodes whose label or files match a substring.
   rungraph serve [--no-open]     Start the server without/with opening a browser.
@@ -165,6 +167,8 @@ export async function main(argv) {
     switch (command) {
       case 'list':
         return await cmdList(opts);
+      case 'summarize':
+        return await cmdSummarize(rest[0], opts);
       case 'graph':
         return await cmdGraph(rest[0], opts);
       case 'find':
@@ -543,4 +547,22 @@ export async function runCli() {
 // agent reads as success.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   await runCli();
+}
+
+async function cmdSummarize(runId, opts) {
+  if (!runId) throw new Error('usage: rungraph summarize <runId> [--json]');
+  const ref = await findRun(runId, { project: opts.project });
+  if (!ref) return 2;
+  const adapter = ADAPTERS.find(a => a.name === ref.adapter);
+  const { details } = await adapter.parse(ref, { collectDetails: true });
+  const outputs = [...details.entries()].filter(([,d]) => d.kind === 'evidence' && d.eventType === 'output');
+  if (!outputs.length) throw new Error('No recorded output evidence in this run.');
+  const results = [];
+  for (const [nodeId, d] of outputs) {
+    process.stderr.write(`summary ${results.length + 1}/${outputs.length} · line ${d.source.line}\n`);
+    const result = await summarizeEvidence(d);
+    results.push({ nodeId, ...result });
+  }
+  process.stdout.write(JSON.stringify({ runId, results }, null, opts.json ? 0 : 2) + '\n');
+  return 0;
 }

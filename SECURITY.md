@@ -43,3 +43,7 @@ path writing something the inventory didn't disclose.
 surface, not a guarantee — `--structure-only` exists for when it matters),
 and anything requiring an attacker who can already run code as your user,
 who could simply read `~/.claude/projects` directly.
+
+## Optional LLM summary boundary (fork)
+
+Explicit `POST /api/summary` and `rungraph summarize` send selected trace evidence to a model through the existing Codex CLI login (default) or configured API. They are separate from the pure parser. Text uses the shared redactor; raster image pixels are sent as-is. The endpoint accepts only existing run/node ids, uses Host/Origin guards, and never accepts commands, provider URLs or credentials from a browser. Prompts use stdin, images use private temporary files, and structured results are cached outside the repository. See [details](docs/CODEX_EVIDENCE.md).

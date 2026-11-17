@@ -1,5 +1,7 @@
 # rungraph
 
+This fork adds [Codex evidence graphs and optional LLM summaries](docs/CODEX_EVIDENCE.md): original code, text and images alongside source-linked interpretation using your existing Codex CLI login.
+
 **Ask your agent what happened. Watch the graph answer.**
 [fayzan123.github.io/rungraph](https://fayzan123.github.io/rungraph/) embeds a
 real run you can click around.
@@ -215,14 +217,13 @@ deltas merge. Zero runtime dependencies; the frontend ships prebuilt.
 
 Everything is local. The server binds `127.0.0.1` only and every request is
 Host-header-guarded, so a hostile page can't DNS-rebind its way into your
-transcripts. rungraph makes no network requests.
+transcripts. Parsing and ordinary browsing make no model requests. This fork also offers an explicit Codex/LLM summarization stage; see [its data flow and configuration](docs/CODEX_EVIDENCE.md).
 
-Content leaves the machine at exactly two boundaries, and both redact:
+Export and MCP remain explicit content boundaries with text redaction:
 `rungraph export` prints an inventory and hard-stops on detected secrets; the
 MCP server redacts every tool result on the way out — node labels included —
 and reports how many values it replaced, so a redacted run is never mistaken
-for a clean one. The dashboard shows the real values: they never leave
-loopback, and reading a key is how you rotate it.
+for a clean one. The dashboard shows the real values over loopback. Explicit LLM summarization sends selected code, text and image pixels to the configured provider; text is redacted using the shared scanner, while image pixels are sent as-is.
 
 ## CLI reference
 

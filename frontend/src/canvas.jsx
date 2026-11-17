@@ -27,6 +27,7 @@ import {
 } from './viewmath.js';
 
 const KIND_TAGS = {
+  evidence: 'evidence',
   turn: 'turn',
   agent: 'agent',
   tool: 'tool',

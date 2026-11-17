@@ -70,3 +70,5 @@ export function watchGraph(runId, onMessage, onStatus) {
 export async function postResume(runId, fork) {
   return { launched: false, copyCommand: '' };
 }
+
+export async function summarizeNode() { throw new Error('LLM summaries require the local rungraph server.'); }

@@ -1,3 +1,4 @@
+import { evidenceGraph } from './evidence.js';
 import { isAbsolute, join } from 'node:path';
 import { emptyGraph, snippet } from '../../ir.js';
 import { readJsonLines, statOrNull } from '../../util.js';
@@ -50,6 +51,7 @@ const KNOWN_TYPES = new Set([
   'turn_context',
   'world_state',
   'compacted',
+  'token_usage_record',
   'inter_agent_communication_metadata',
 ]);
 const KNOWN_EVENTS = new Set([
@@ -71,6 +73,7 @@ const KNOWN_EVENTS = new Set([
   'thread_settings_applied',
 ]);
 const KNOWN_ITEMS = new Set([
+  'additional_tools',
   'message',
   'reasoning',
   'function_call',
@@ -142,7 +145,7 @@ export async function parse(ref, opts = {}) {
       tallyUnknownType(unknownTypes, obj?.type);
       continue;
     }
-    lines.push(obj);
+    lines.push({ ...obj, _line: lineNo });
   }
   // A malformed FINAL line is mid-write truncation (live tail), not drift —
   // still a record examined, so it counts in `records`, not `unrecognized`.
@@ -237,6 +240,32 @@ export async function parse(ref, opts = {}) {
     agents: resolved.length,
   };
   if (b.title) g.meta.title = snippet(b.title, 100);
+  const evidence = evidenceGraph(lines, ref.sessionFile, { collectDetails: collect });
+  if (evidence) {
+    // Preserve child-agent lanes and reattach their spine anchors to the evidence.
+    const agents = g.nodes.filter(n => n.kind === 'agent');
+    const retained = new Set(agents.map(n => n.id));
+    const callAnchor = new Map(evidence.nodes.filter(n => n.ext?.codex?.eventType === 'call').map(n => [n.ext.codex.callId, n.id]));
+    const agentEdges = [];
+    for (const edge of g.edges.filter(e => e.kind === 'spawn' || e.kind === 'return')) {
+      if (edge.kind === 'spawn') {
+        const agent = agents.find(n => n.id === edge.to);
+        const from = retained.has(edge.from) ? edge.from : callAnchor.get(agent?.id.replace(/^a:/, '')) ?? callAnchor.get(edge.from.replace(/^g:/, ''));
+        if (from) agentEdges.push({ ...edge, from });
+      } else {
+        const agent = agents.find(n => n.id === edge.from);
+        const to = retained.has(edge.to) ? edge.to : evidence.nodes.find(n => agent?.endedAt && Date.parse(n.startedAt) >= Date.parse(agent.endedAt))?.id;
+        // No fabricated backwards return edge if the parent has no later record.
+        if (to) agentEdges.push({ ...edge, to, reason: 'child return; parent anchor chosen by recorded time' });
+      }
+    }
+    g.nodes = [...evidence.nodes, ...agents];
+    g.edges = [...evidence.edges, ...agentEdges];
+    for (const id of [...details.keys()]) if (!retained.has(id)) details.delete(id);
+    for (const [id, d] of evidence.details) details.set(id, d);
+    g.meta.ext = { ...g.meta.ext, codex: { ...g.meta.ext?.codex, evidenceChain: true } };
+    if (evidence.prompt) g.meta.title = snippet(evidence.prompt, 100);
+  }
   return { ir: g, details };
 }
 
@@ -318,6 +347,7 @@ class RolloutBuilder {
         // reason on the next move, but not a node of its own.
         this.pendingReason = 'after context compaction';
         return 0;
+      case 'token_usage_record':
       case 'world_state':
       case 'inter_agent_communication_metadata':
         return 0;

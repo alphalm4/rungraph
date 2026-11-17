@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { fetchDetail } from './api.js';
+import { fetchDetail, summarizeNode } from './api.js';
 import { fmtTokens, fmtDuration } from './canvas.jsx';
 import { SIGNAL_GLYPHS } from './strip.jsx';
 import { adapterName, compactPath, filesIndex, rankedFocusNodes, relPath, signalsForNode } from './focus.js';
@@ -602,7 +602,7 @@ function NodeDetail({
       {failed && <div class="loading">transcript unavailable</div>}
       {body && (
         <div class="detail-body" data-stale={String(stale)}>
-          <DetailBody detail={body} futureFrom={futureFrom} />
+          <DetailBody key={key} detail={body} futureFrom={futureFrom} runId={runId} nodeId={nodeId} />
         </div>
       )}
     </>
@@ -610,8 +610,10 @@ function NodeDetail({
 }
 
 /** `futureFrom`: the first call row (0-based) that has not happened yet at the playhead; Infinity when all have. */
-function DetailBody({ detail, futureFrom = Infinity }) {
+function DetailBody({ detail, futureFrom = Infinity, runId, nodeId }) {
   switch (detail.kind) {
+    case 'evidence':
+      return <EvidenceDetail detail={detail} runId={runId} nodeId={nodeId} />;
     case 'turn':
       return (
         <>
@@ -763,4 +765,42 @@ function fmtTime(iso) {
     minute: '2-digit',
     second: '2-digit',
   });
+}
+
+function EvidenceDetail({ detail, runId, nodeId }) {
+  const [result, setResult] = useState(detail.summary);
+  useEffect(() => setResult(detail.summary), [detail.summary]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const summarize = async () => {
+    setBusy(true); setError('');
+    try { setResult(await summarizeNode(runId, nodeId)); }
+    catch (e) { setError(e.message); }
+    finally { setBusy(false); }
+  };
+  const s = result?.summary;
+  return <>
+    <div class="microlabel section-label">{detail.eventType} · line {detail.source?.line}</div>
+    <p class="microlabel">{detail.source?.file}</p>
+    {detail.encrypted && <p>Reasoning is encrypted. Its content is unavailable.</p>}
+    <button class="row" disabled={busy || (detail.encrypted && !detail.text)} onClick={summarize}>
+      {busy ? 'Summarizing code, output and images…' : result ? 'Load cached summary' : detail.summaryBackend === 'api' ? 'Summarize with configured LLM' : 'Summarize with Codex'}
+    </button>
+    <p class="microlabel">Explicit model call · code, text and displayed images are sent for analysis. Recorded facts and inferred intent are separated below.</p>
+    {error && <p class="err" role="alert">{error}</p>}
+    {s && <div class="evidence-summary">
+      <div class="microlabel section-label">LLM interpretation · {result.model} · {result.cached ? 'cached' : 'generated'}</div>
+      {Object.entries({ 'Stated intent': s.intent.stated, 'Inferred intent': s.intent.inferred, 'Code': s.code, 'Text output': s.textOutput, 'Next recorded action': s.nextAction }).map(([k,v]) => v && <section key={k}><strong>{k}</strong><pre>{v}</pre></section>)}
+      {s.images.map(im => <section key={im.index}><strong>Image {im.index}</strong><pre>{im.description}</pre></section>)}
+      {[...s.limitations, ...result.omissions].map((v,i) => <p key={i}>{v}</p>)}
+      <p class="microlabel">Evidence: {s.evidence.map(e => `${e.file}:${e.line}`).join(', ')}</p>
+      {result.redacted > 0 && <p>{result.redacted} secret patterns redacted from model input.</p>}
+    </div>}
+    {detail.code && <><div class="microlabel section-label">Executed code · original</div><pre>{detail.code}</pre></>}
+    {(detail.output || detail.text) && <><div class="microlabel section-label">Recorded text · original{detail.truncated ? ' · truncated by source' : ''}</div><pre>{detail.output || detail.text}</pre></>}
+    {detail.execution && <><div class="microlabel section-label">Recorded execution · original</div><pre>{JSON.stringify(detail.execution, null, 2)}</pre></>}
+    {detail.images?.map((im,i) => <figure class="evidence-image" key={i}><img src={im.url} alt={`Recorded tool output image ${i+1}`} loading="lazy"/><figcaption>Image {i+1} · actual recorded output</figcaption></figure>)}
+    {detail.precedingMessages?.length > 0 && <details><summary>Preceding GPT messages</summary>{detail.precedingMessages.map((m,i) => <pre key={i}>Line {m.source?.line ?? m.line}: {m.text}</pre>)}</details>}
+    {detail.observations?.length > 0 && <details><summary>Commands, image views and file changes inside this call</summary>{detail.observations.map((o,i) => <pre key={i}>{JSON.stringify(o, (k,v) => k === "url" && typeof v === "string" && v.startsWith("data:image/") ? "[pixels displayed above]" : v, 2)}</pre>)}</details>}
+  </>;
 }
