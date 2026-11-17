@@ -100,6 +100,16 @@ describe('modern Codex evidence graph', () => {
     expect(g.nodes.at(-1).status).toBe('running');
     expect(g.nodes.at(-1).endedAt).toBeUndefined();
   });
+  it('does not attribute another user turn’s actions to this output', () => {
+    const g = evidenceGraph(records([
+      event({ type: 'UserMessage' }), call('a'), output('a', '65 atoms'),
+      message('user', 'Now inspect a different paper'),
+      message('assistant', 'Opening the other paper'), call('b'),
+    ]), '/two-turns', { collectDetails: true });
+    const d = [...g.details.values()].find(d => d.eventType === 'output');
+    expect(d.followingMessages).toEqual([]);
+    expect(d.followingAction).toBeNull();
+  });
   it('does not switch legacy streams or render remote image URLs', () => {
     expect(evidenceGraph(records([message('user', 'old')]), '/old')).toBeNull();
     const g = evidenceGraph(
