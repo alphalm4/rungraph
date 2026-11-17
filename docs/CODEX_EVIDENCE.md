@@ -10,6 +10,8 @@ parallel calls; sequence arrows mean recorded order, not proof of causation.
 UI echoes of messages/reasoning are suppressed. Older event-stream sessions keep
 the existing compact graph. Child-agent lanes retain the existing adapter view.
 
+LLM interpretation is retrospective and can include subsequent actions; it is hidden while replay is positioned before the end of the run.
+
 Select a node to read full recorded code and text, command metadata and embedded
 images. No transcript code is executed. Only embedded raster data is rendered;
 paths/remote URLs are not fetched. ImageView paths are paired with returned pixels
